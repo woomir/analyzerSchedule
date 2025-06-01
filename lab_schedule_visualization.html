@@ -258,8 +258,8 @@
         }
         
         .holiday {
-            background: #ffebee;
-            color: #d32f2f;
+            background: #f5f5f5; /* Changed to match weekend background */
+            color: #d32f2f;    /* Keep red text for distinction */
         }
         
         .vacation {
@@ -934,9 +934,7 @@
                         document.getElementById('adminModeBtn').classList.add('active');
                         // 관리자 모드 진입 시 기본 탭을 설정하거나, 마지막 탭을 유지할 수 있음
                         // 여기서는 기본으로 allocation 탭을 보여주도록 설정
-
-                        showTab('allocation'); 
-
+                        showTab('allocation');
                     } else if (password !== null) { // 사용자가 취소를 누르지 않았지만 비밀번호가 틀린 경우
                         alert("비밀번호가 올바르지 않습니다.");
                         return; // 모드 변경 중단

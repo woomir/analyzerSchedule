@@ -1356,22 +1356,41 @@
                     const dateStr = currentDate.toISOString().split('T')[0];
                     const isCurrentMonth = currentDate.getMonth() === month;
                     
+                    const localYear = currentDate.getFullYear();
+                    const localMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+                    const localDay = String(currentDate.getDate()).padStart(2, '0');
+                    const localDateStringForComparison = `${localYear}-${localMonth}-${localDay}`;
+
                     let cellClass = 'day-cell';
                     let cellContent = '';
                     
                     if (!isCurrentMonth) {
-                        cellClass += ' weekend';
-                        cellContent = `<div class="day-number">${currentDate.getDate()}</div>`;
-                    } else {
-                        cellContent = generateDayContent(currentDate, dateStr);
-                        
+                        // For days not in the current month, usually just a number is shown and they might look like weekends.
+                        // The original logic applied 'weekend' class to all out-of-month days.
+                        // We can keep them visually distinct or apply specific styling if needed.
+                        // For now, let's ensure they get a base style, and weekend styling if they are actual weekends.
                         if (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
                             cellClass += ' weekend';
                         }
-                        else if (currentConfig.holidays?.includes(dateStr)) {
-                            cellClass += ' holiday';
+                        cellContent = `<div class="day-number">${currentDate.getDate()}</div>`;
+                    } else {
+                        cellContent = generateDayContent(currentDate, dateStr); // dateStr (UTC) is for data, generateDayContent uses local for display text
+                        
+                        // Apply base styling for current month days
+                        // Weekend check
+                        if (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
+                            cellClass += ' weekend';
                         }
-                        else if (currentConfig.vacations?.some(v => v.start <= dateStr && dateStr <= v.end)) {
+
+                        // Holiday check - takes precedence for background if it's also a weekend
+                        let isHoliday = currentConfig.holidays?.includes(localDateStringForComparison);
+                        if (isHoliday) {
+                            cellClass += ' holiday'; // Applies gray background and red text
+                        }
+
+                        // Vacation check - applies vacation background only if not a holiday
+                        let isVacation = currentConfig.vacations?.some(v => v.start <= localDateStringForComparison && localDateStringForComparison <= v.end);
+                        if (isVacation && !isHoliday) {
                             cellClass += ' vacation';
                         }
                     }

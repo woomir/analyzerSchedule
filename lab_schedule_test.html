@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연구소 샘플 할당 스케줄 시스템 (테스트)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #1a73e8;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #5f6368;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .mode-selector {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .mode-btn {
+            padding: 12px 24px;
+            margin: 0 10px;
+            border: 2px solid #1a73e8;
+            background: white;
+            color: #1a73e8;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .mode-btn.active {
+            background: #1a73e8;
+            color: white;
+        }
+        
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: bold;
+            color: #5f6368;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            margin: 0 5px 10px 5px;
+        }
+        
+        .tab.active {
+            color: #1a73e8;
+            border-bottom-color: #1a73e8;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* 그룹 정보 */
+        .group-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .group-card {
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .group-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+        }
+        
+        .group-card .max-count {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
+        .group-card .label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        /* 캘린더 스타일 */
+        .monthly-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .month-container {
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .month-header {
+            background: #4285f4;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+        
+        .day-header {
+            background: #f1f3f4;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+            border-bottom: 1px solid #dadce0;
+        }
+        
+        .day-cell {
+            min-height: 80px;
+            border: 1px solid #e8eaed;
+            padding: 4px;
+            font-size: 11px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .day-cell:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .day-number {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .group-samples {
+            margin-bottom: 2px;
+        }
+        
+        .group-tag {
+            display: inline-block;
+            padding: 1px 4px;
+            border-radius: 8px;
+            font-size: 9px;
+            color: white;
+            margin-right: 2px;
+            margin-bottom: 1px;
+        }
+        
+        .weekend {
+            background: #f5f5f5;
+            color: #9e9e9e;
+        }
+        
+        .holiday {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .vacation {
+            background: #fff3e0;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .alert-info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            color: #1565c0;
+        }
+        
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .monthly-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 연구소 샘플 할당 스케줄 시스템</h1>
+        <div class="subtitle">테스트 버전 (로컬 데이터)</div>
+        
+        <!-- 상태 표시 -->
+        <div class="status">
+            ✅ 시스템 정상 작동 중
+        </div>
+        
+        <div class="mode-selector">
+            <h3>접근 모드 선택</h3>
+            <button class="mode-btn active" id="viewerModeBtn">👁️ 뷰어 모드 (일반 사용자)</button>
+            <button class="mode-btn" id="adminModeBtn">⚙️ 관리자 모드</button>
+        </div>
+        
+        <div class="tab-container">
+            <button class="tab active" id="calendarTab">📅 스케줄 보기</button>
+        </div>
+        
+        <!-- 스케줄 보기 탭 -->
+        <div id="calendar" class="tab-content active">
+            <div class="group-info">
+                <div class="group-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #ff6b6bdd 100%);">
+                    <h3>#박유창</h3>
+                    <div class="max-count">최대 8개</div>
+                    <div class="label">일일 최대 샘플 수</div>
+                </div>
+                <div class="group-card" style="background: linear-gradient(135deg, #4834d4 0%, #4834d4dd 100%);">
+                    <h3>#신현석</h3>
+                    <div class="max-count">최대 8개</div>
+                    <div class="label">일일 최대 샘플 수</div>
+                </div>
+                <div class="group-card" style="background: linear-gradient(135deg, #00d2d3 0%, #00d2d3dd 100%);">
+                    <h3>#이지헌</h3>
+                    <div class="max-count">최대 35개</div>
+                    <div class="label">일일 최대 샘플 수</div>
+                </div>
+            </div>
+            
+            <div class="monthly-grid">
+                <div class="month-container">
+                    <div class="month-header">📅 2025년 6월</div>
+                    <div class="calendar">
+                        <div class="day-header">일</div>
+                        <div class="day-header">월</div>
+                        <div class="day-header">화</div>
+                        <div class="day-header">수</div>
+                        <div class="day-header">목</div>
+                        <div class="day-header">금</div>
+                        <div class="day-header">토</div>
+                        
+                        <!-- 6월 달력 (일요일 시작) -->
+                        <div class="day-cell weekend"><div class="day-number">1</div></div>
+                        <div class="day-cell">
+                            <div class="day-number">2</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박5</span>
+                                <span class="group-tag" style="background: #4834d4;">신6</span>
+                                <span class="group-tag" style="background: #00d2d3;">이20</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">3</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박7</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이25</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">4</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박6</span>
+                                <span class="group-tag" style="background: #4834d4;">신7</span>
+                                <span class="group-tag" style="background: #00d2d3;">이30</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">5</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이35</span>
+                            </div>
+                        </div>
+                        <div class="day-cell holiday">
+                            <div class="day-number">6</div>
+                            <div style="font-size: 9px; color: #d32f2f;">현충일</div>
+                        </div>
+                        <div class="day-cell weekend"><div class="day-number">7</div></div>
+                        
+                        <div class="day-cell weekend"><div class="day-number">8</div></div>
+                        <div class="day-cell">
+                            <div class="day-number">9</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신6</span>
+                                <span class="group-tag" style="background: #00d2d3;">이28</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">10</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박7</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이32</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">11</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박6</span>
+                                <span class="group-tag" style="background: #4834d4;">신7</span>
+                                <span class="group-tag" style="background: #00d2d3;">이30</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">12</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이33</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">13</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박7</span>
+                                <span class="group-tag" style="background: #4834d4;">신6</span>
+                                <span class="group-tag" style="background: #00d2d3;">이29</span>
+                            </div>
+                        </div>
+                        <div class="day-cell weekend"><div class="day-number">14</div></div>
+                        
+                        <div class="day-cell weekend"><div class="day-number">15</div></div>
+                        <div class="day-cell vacation">
+                            <div class="day-number">16</div>
+                            <div style="font-size: 9px; color: #f57c00;">김연구 휴가</div>
+                        </div>
+                        <div class="day-cell vacation">
+                            <div class="day-number">17</div>
+                            <div style="font-size: 9px; color: #f57c00;">김연구 휴가</div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">18</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박5</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이28</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">19</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박6</span>
+                                <span class="group-tag" style="background: #4834d4;">신7</span>
+                                <span class="group-tag" style="background: #00d2d3;">이31</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">20</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이35</span>
+                            </div>
+                        </div>
+                        <div class="day-cell weekend"><div class="day-number">21</div></div>
+                        
+                        <div class="day-cell weekend"><div class="day-number">22</div></div>
+                        <div class="day-cell">
+                            <div class="day-number">23</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박7</span>
+                                <span class="group-tag" style="background: #4834d4;">신6</span>
+                                <span class="group-tag" style="background: #00d2d3;">이30</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">24</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이32</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">25</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박6</span>
+                                <span class="group-tag" style="background: #4834d4;">신7</span>
+                                <span class="group-tag" style="background: #00d2d3;">이28</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">26</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이35</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">27</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박7</span>
+                                <span class="group-tag" style="background: #4834d4;">신6</span>
+                                <span class="group-tag" style="background: #00d2d3;">이29</span>
+                            </div>
+                        </div>
+                        <div class="day-cell weekend"><div class="day-number">28</div></div>
+                        
+                        <div class="day-cell weekend"><div class="day-number">29</div></div>
+                        <div class="day-cell">
+                            <div class="day-number">30</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이33</span>
+                            </div>
+                        </div>
+                        <div class="day-cell weekend" style="opacity: 0.5;"><div class="day-number">1</div></div>
+                        <div class="day-cell weekend" style="opacity: 0.5;"><div class="day-number">2</div></div>
+                        <div class="day-cell weekend" style="opacity: 0.5;"><div class="day-number">3</div></div>
+                        <div class="day-cell weekend" style="opacity: 0.5;"><div class="day-number">4</div></div>
+                        <div class="day-cell weekend" style="opacity: 0.5;"><div class="day-number">5</div></div>
+                    </div>
+                </div>
+                
+                <div class="month-container">
+                    <div class="month-header">📅 2025년 7월</div>
+                    <div class="calendar">
+                        <div class="day-header">일</div>
+                        <div class="day-header">월</div>
+                        <div class="day-header">화</div>
+                        <div class="day-header">수</div>
+                        <div class="day-header">목</div>
+                        <div class="day-header">금</div>
+                        <div class="day-header">토</div>
+                        
+                        <!-- 7월 달력 -->
+                        <div class="day-cell weekend" style="opacity: 0.5;"><div class="day-number">29</div></div>
+                        <div class="day-cell weekend" style="opacity: 0.5;"><div class="day-number">30</div></div>
+                        <div class="day-cell">
+                            <div class="day-number">1</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박6</span>
+                                <span class="group-tag" style="background: #4834d4;">신7</span>
+                                <span class="group-tag" style="background: #00d2d3;">이30</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">2</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이35</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">3</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박7</span>
+                                <span class="group-tag" style="background: #4834d4;">신6</span>
+                                <span class="group-tag" style="background: #00d2d3;">이28</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">4</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이32</span>
+                            </div>
+                        </div>
+                        <div class="day-cell weekend"><div class="day-number">5</div></div>
+                        
+                        <!-- 더 많은 7월 날짜들 -->
+                        <div class="day-cell weekend"><div class="day-number">6</div></div>
+                        <div class="day-cell">
+                            <div class="day-number">7</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박6</span>
+                                <span class="group-tag" style="background: #4834d4;">신7</span>
+                                <span class="group-tag" style="background: #00d2d3;">이29</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">8</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이33</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">9</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박7</span>
+                                <span class="group-tag" style="background: #4834d4;">신6</span>
+                                <span class="group-tag" style="background: #00d2d3;">이30</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">10</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이35</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">11</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박6</span>
+                                <span class="group-tag" style="background: #4834d4;">신7</span>
+                                <span class="group-tag" style="background: #00d2d3;">이28</span>
+                            </div>
+                        </div>
+                        <div class="day-cell weekend"><div class="day-number">12</div></div>
+                        
+                        <div class="day-cell weekend"><div class="day-number">13</div></div>
+                        <div class="day-cell">
+                            <div class="day-number">14</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이32</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">15</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박7</span>
+                                <span class="group-tag" style="background: #4834d4;">신6</span>
+                                <span class="group-tag" style="background: #00d2d3;">이29</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">16</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이33</span>
+                            </div>
+                        </div>
+                        <div class="day-cell holiday">
+                            <div class="day-number">17</div>
+                            <div style="font-size: 9px; color: #d32f2f;">제헌절</div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">18</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박6</span>
+                                <span class="group-tag" style="background: #4834d4;">신7</span>
+                                <span class="group-tag" style="background: #00d2d3;">이30</span>
+                            </div>
+                        </div>
+                        <div class="day-cell weekend"><div class="day-number">19</div></div>
+                        
+                        <div class="day-cell weekend"><div class="day-number">20</div></div>
+                        <div class="day-cell vacation">
+                            <div class="day-number">21</div>
+                            <div style="font-size: 9px; color: #f57c00;">이분석 휴가</div>
+                        </div>
+                        <div class="day-cell vacation">
+                            <div class="day-number">22</div>
+                            <div style="font-size: 9px; color: #f57c00;">이분석 휴가</div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">23</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신6</span>
+                                <span class="group-tag" style="background: #00d2d3;">이28</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">24</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박7</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이35</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">25</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이32</span>
+                            </div>
+                        </div>
+                        <div class="day-cell weekend"><div class="day-number">26</div></div>
+                        
+                        <div class="day-cell weekend"><div class="day-number">27</div></div>
+                        <div class="day-cell">
+                            <div class="day-number">28</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박6</span>
+                                <span class="group-tag" style="background: #4834d4;">신7</span>
+                                <span class="group-tag" style="background: #00d2d3;">이29</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">29</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이33</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">30</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박7</span>
+                                <span class="group-tag" style="background: #4834d4;">신6</span>
+                                <span class="group-tag" style="background: #00d2d3;">이30</span>
+                            </div>
+                        </div>
+                        <div class="day-cell">
+                            <div class="day-number">31</div>
+                            <div class="group-samples">
+                                <span class="group-tag" style="background: #ff6b6b;">박8</span>
+                                <span class="group-tag" style="background: #4834d4;">신8</span>
+                                <span class="group-tag" style="background: #00d2d3;">이35</span>
+                            </div>
+                        </div>
+                        <div class="day-cell weekend" style="opacity: 0.5;"><div class="day-number">1</div></div>
+                        <div class="day-cell weekend" style="opacity: 0.5;"><div class="day-number">2</div></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-info">
+                <strong>📊 분석원별 업무 현황:</strong><br>
+                👨‍🔬 김연구: 6월 16-17일 휴가 | 👩‍🔬 이분석: 7월 21-22일 휴가<br>
+                👨‍🔬 박실험: 정상 근무 | 👩‍🔬 최테스트: 정상 근무<br><br>
+                <strong>📅 공휴일:</strong> 6월 6일(현충일), 7월 17일(제헌절)<br>
+                <strong>📈 일일 목표:</strong> 각 그룹별 최대 할당량 내에서 균등 분배
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 간단한 JavaScript로 기본 기능 구현
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('연구소 스케줄 시스템 로딩 완료');
+            
+            // 모드 버튼 이벤트
+            const viewerBtn = document.getElementById('viewerModeBtn');
+            const adminBtn = document.getElementById('adminModeBtn');
+            
+            viewerBtn.addEventListener('click', function() {
+                viewerBtn.classList.add('active');
+                adminBtn.classList.remove('active');
+                console.log('뷰어 모드 활성화');
+            });
+            
+            adminBtn.addEventListener('click', function() {
+                adminBtn.classList.add('active');
+                viewerBtn.classList.remove('active');
+                console.log('관리자 모드 활성화');
+                alert('관리자 기능은 Firebase 연결 후 사용 가능합니다.');
+            });
+            
+            // 날짜 셀 클릭 이벤트
+            const dayCells = document.querySelectorAll('.day-cell');
+            dayCells.forEach(cell => {
+                cell.addEventListener('click', function() {
+                    const dayNumber = this.querySelector('.day-number');
+                    if (dayNumber) {
+                        console.log(`${dayNumber.textContent}일 클릭됨`);
+                    }
+                });
+            });
+            
+            // 성공 메시지 표시
+            setTimeout(() => {
+                const status = document.querySelector('.status');
+                status.innerHTML = '✅ 테스트 데이터 로딩 완료 - Firebase 설정 후 실시간 동기화 가능';
+                status.style.background = '#e8f5e8';
+                status.style.color = '#2e7d32';
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연구소 샘플 할당 스케줄 시스템 (Firebase)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #1a73e8;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #5f6368;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .firebase-status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .firebase-connected {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .firebase-disconnected {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .firebase-loading {
+            background: #fff3cd;
+            color: #e65100;
+        }
+        
+        .mode-selector {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .mode-btn {
+            padding: 12px 24px;
+            margin: 0 10px;
+            border: 2px solid #1a73e8;
+            background: white;
+            color: #1a73e8;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .mode-btn.active {
+            background: #1a73e8;
+            color: white;
+        }
+        
+        .admin-only {
+            display: none;
+        }
+        
+        .admin-mode .admin-only {
+            display: block;
+        }
+        
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: bold;
+            color: #5f6368;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            margin: 0 5px 10px 5px;
+        }
+        
+        .tab.active {
+            color: #1a73e8;
+            border-bottom-color: #1a73e8;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #5f6368;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1a73e8;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 그룹 정보 */
+        .group-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .group-card {
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .group-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+        }
+        
+        .group-card .max-count {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
+        .group-card .label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        /* 캘린더 스타일 */
+        .monthly-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .month-container {
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .month-header {
+            background: #4285f4;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+        
+        .day-header {
+            background: #f1f3f4;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+            border-bottom: 1px solid #dadce0;
+        }
+        
+        .day-cell {
+            min-height: 80px;
+            border: 1px solid #e8eaed;
+            padding: 4px;
+            font-size: 11px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .day-cell:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .day-number {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .group-samples {
+            margin-bottom: 2px;
+        }
+        
+        .group-tag {
+            display: inline-block;
+            padding: 1px 4px;
+            border-radius: 8px;
+            font-size: 9px;
+            color: white;
+            margin-right: 2px;
+            margin-bottom: 1px;
+        }
+        
+        .weekend {
+            background: #f5f5f5;
+            color: #9e9e9e;
+        }
+        
+        .holiday {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .vacation {
+            background: #fff3e0;
+        }
+        
+        /* 할당 관리 스타일 */
+        .allocation-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .allocation-section h3 {
+            color: #1a73e8;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .date-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .allocation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .analyst-allocation {
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .analyst-allocation h4 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #1a73e8;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .group-allocation {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .group-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .group-label {
+            min-width: 80px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .group-input {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .total-display {
+            font-weight: bold;
+            color: #5f6368;
+        }
+        
+        /* 폼 스타일 */
+        .input-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .input-section h3 {
+            color: #1a73e8;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #5f6368;
+        }
+        
+        .form-group input, .form-group select {
+            padding: 8px 12px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+        
+        .btn:hover:not(:disabled) {
+            background: #1557b0;
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #5f6368;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: #3c4043;
+        }
+        
+        .btn-export {
+            background: #34a853;
+        }
+        
+        .btn-export:hover:not(:disabled) {
+            background: #2e7d32;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .alert-info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            color: #1565c0;
+        }
+        
+        .alert-success {
+            background: #e8f5e8;
+            border-left: 4px solid #4caf50;
+            color: #2e7d32;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border-left: 4px solid #ff9800;
+            color: #e65100;
+        }
+        
+        .alert-error {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            color: #c62828;
+        }
+        
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .monthly-grid {
+                grid-template-columns: 1fr;
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .allocation-grid {
+                grid-template-columns: 1fr;
+            }
+            .tab-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .tab {
+                margin: 5px 0;
+            }
+            .date-selector {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 연구소 샘플 할당 스케줄 시스템</h1>
+        <div class="subtitle">실시간 공유 시스템 (Firebase)</div>
+        
+        <!-- Firebase 연결 상태 -->
+        <div id="firebaseStatus" class="firebase-status firebase-loading">
+            🔥 Firebase 연결 중...
+        </div>
+        
+        <div class="mode-selector">
+            <h3>접근 모드 선택</h3>
+            <button class="mode-btn active" id="viewerModeBtn">👁️ 뷰어 모드 (일반 사용자)</button>
+            <button class="mode-btn" id="adminModeBtn">⚙️ 관리자 모드</button>
+        </div>
+        
+        <div class="tab-container">
+            <button class="tab active" id="calendarTab">📅 스케줄 보기</button>
+            <button class="tab admin-only" id="allocationTab">📊 할당 관리</button>
+            <button class="tab admin-only" id="setupTab">⚙️ 기본 설정</button>
+            <button class="tab admin-only" id="exportTab">💾 내보내기</button>
+        </div>
+        
+        <!-- 로딩 화면 -->
+        <div id="loadingScreen" class="loading">
+            <div class="spinner"></div>
+            <p>데이터를 불러오는 중입니다...</p>
+        </div>
+        
+        <!-- 스케줄 보기 탭 (기본) -->
+        <div id="calendar" class="tab-content active" style="display: none;">
+            <div class="alert alert-info" id="noDataAlert">
+                관리자가 스케줄을 설정하면 여기에 표시됩니다.
+            </div>
+            
+            <div class="group-info" id="groupInfo" style="display: none;">
+                <!-- 그룹 정보가 여기에 동적으로 생성됩니다 -->
+            </div>
+            
+            <div class="monthly-grid" id="calendarContainer" style="display: none;">
+                <!-- 캘린더가 여기에 동적으로 생성됩니다 -->
+            </div>
+        </div>
+        
+        <!-- 할당 관리 탭 (관리자 전용) -->
+        <div id="allocation" class="tab-content">
+            <div class="allocation-section">
+                <h3>📊 일일 샘플 할당 관리</h3>
+                
+                <div class="date-selector">
+                    <label for="allocationDate">날짜 선택:</label>
+                    <input type="date" id="allocationDate">
+                    <button class="btn btn-secondary" id="copyPrevBtn">전날 복사</button>
+                    <button class="btn" id="saveAllocationBtn">할당 저장</button>
+                </div>
+                
+                <div class="alert alert-warning" id="allocationAlert" style="display: none;">
+                    날짜를 선택하고 각 분석원에게 그룹별 샘플을 할당하세요.
+                </div>
+                
+                <div class="allocation-grid" id="allocationGrid">
+                    <!-- 할당 UI가 여기에 동적으로 생성됩니다 -->
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #e8f5e8; border-radius: 5px; display: none;" id="allocationSummary">
+                    <h4>할당 요약</h4>
+                    <div id="summaryContent"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 기본 설정 탭 (관리자 전용) -->
+        <div id="setup" class="tab-content">
+            <div class="input-section">
+                <h3>📋 기본 설정</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="startDate">시작 날짜</label>
+                        <input type="date" id="startDate" value="2025-06-01">
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">종료 날짜</label>
+                        <input type="date" id="endDate" value="2025-07-31">
+                    </div>
+                    <div class="form-group">
+                        <label for="labName">연구소/부서명</label>
+                        <input type="text" id="labName" value="분석연구소" placeholder="연구소명을 입력하세요">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="input-section">
+                <h3>👥 분석원 정보</h3>
+                <div class="form-grid" id="analystsGrid">
+                    <div class="form-group">
+                        <label>분석원 1</label>
+                        <input type="text" class="analyst-name" value="김연구" placeholder="이름">
+                        <input type="text" class="analyst-emoji" value="👨‍🔬" placeholder="이모지" style="margin-top: 5px;">
+                    </div>
+                    <div class="form-group">
+                        <label>분석원 2</label>
+                        <input type="text" class="analyst-name" value="이분석" placeholder="이름">
+                        <input type="text" class="analyst-emoji" value="👩‍🔬" placeholder="이모지" style="margin-top: 5px;">
+                    </div>
+                    <div class="form-group">
+                        <label>분석원 3</label>
+                        <input type="text" class="analyst-name" value="박실험" placeholder="이름">
+                        <input type="text" class="analyst-emoji" value="👨‍🔬" placeholder="이모지" style="margin-top: 5px;">
+                    </div>
+                    <div class="form-group">
+                        <label>분석원 4</label>
+                        <input type="text" class="analyst-name" value="최테스트" placeholder="이름">
+                        <input type="text" class="analyst-emoji" value="👩‍🔬" placeholder="이모지" style="margin-top: 5px;">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="input-section">
+                <h3>🧪 그룹별 샘플 설정</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="group1Name">그룹 1 이름</label>
+                        <input type="text" id="group1Name" value="#박유창" placeholder="그룹명">
+                    </div>
+                    <div class="form-group">
+                        <label for="group1Max">그룹 1 최대 샘플/일</label>
+                        <input type="number" id="group1Max" value="8" min="1" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="group1Color">그룹 1 색상</label>
+                        <input type="color" id="group1Color" value="#ff6b6b">
+                    </div>
+                    <div class="form-group">
+                        <label for="group2Name">그룹 2 이름</label>
+                        <input type="text" id="group2Name" value="#신현석" placeholder="그룹명">
+                    </div>
+                    <div class="form-group">
+                        <label for="group2Max">그룹 2 최대 샘플/일</label>
+                        <input type="number" id="group2Max" value="8" min="1" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="group2Color">그룹 2 색상</label>
+                        <input type="color" id="group2Color" value="#4834d4">
+                    </div>
+                    <div class="form-group">
+                        <label for="group3Name">그룹 3 이름</label>
+                        <input type="text" id="group3Name" value="#이지헌" placeholder="그룹명">
+                    </div>
+                    <div class="form-group">
+                        <label for="group3Max">그룹 3 최대 샘플/일</label>
+                        <input type="number" id="group3Max" value="35" min="1" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="group3Color">그룹 3 색상</label>
+                        <input type="color" id="group3Color" value="#00d2d3">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="input-section">
+                <h3>🏖️ 휴가 및 공휴일 설정</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="holidays">공휴일 (쉼표로 구분)</label>
+                        <input type="text" id="holidays" value="2025-06-06,2025-07-17" placeholder="2025-06-06,2025-07-17">
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <h4>개별 휴가 설정</h4>
+                    <div id="vacationSettings">
+                        <div class="vacation-row" style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                            <select class="vacation-analyst">
+                                <option value="김연구">김연구</option>
+                                <option value="이분석">이분석</option>
+                                <option value="박실험">박실험</option>
+                                <option value="최테스트">최테스트</option>
+                            </select>
+                            <input type="date" class="vacation-start" value="2025-06-16">
+                            <input type="date" class="vacation-end" value="2025-06-17">
+                            <button type="button" class="btn btn-secondary vacation-remove">삭제</button>
+                        </div>
+                        <div class="vacation-row" style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                            <select class="vacation-analyst">
+                                <option value="김연구">김연구</option>
+                                <option value="이분석" selected>이분석</option>
+                                <option value="박실험">박실험</option>
+                                <option value="최테스트">최테스트</option>
+                            </select>
+                            <input type="date" class="vacation-start" value="2025-07-21">
+                            <input type="date" class="vacation-end" value="2025-07-22">
+                            <button type="button" class="btn btn-secondary vacation-remove">삭제</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-secondary" id="addVacationBtn">휴가 추가</button>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn" id="saveConfigBtn">💾 설정 저장</button>
+                <button class="btn btn-secondary" id="resetDataBtn">🔄 데이터 초기화</button>
+            </div>
+        </div>
+        
+        <!-- 내보내기 탭 (관리자 전용) -->
+        <div id="export" class="tab-content">
+            <div class="input-section">
+                <h3>📤 데이터 내보내기</h3>
+                <p>생성된 스케줄을 다양한 형태로 내보낼 수 있습니다.</p>
+                
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+                    <button class="btn btn-export" id="exportCsvBtn">📊 CSV 다운로드</button>
+                    <button class="btn btn-export" id="exportJsonBtn">📋 JSON 다운로드</button>
+                    <button class="btn btn-export" id="printBtn">🖨️ 인쇄</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase 설정 및 초기화
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Firebase 설정 (이 설정은 공개되어도 안전합니다)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBM3n9G_Vq4OEdm7joFZoApNu6mIKONvAM",
+            authDomain: "lab-schedule-system.firebaseapp.com",
+            projectId: "lab-schedule-system",
+            storageBucket: "lab-schedule-system.firebasestorage.app",
+            messagingSenderId: "610591324404",
+            appId: "1:610591324404:web:04cc6087c8af17869c86a1"
+        };
+
+        // Firebase 초기화
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 전역 변수
+        window.db = db;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+        window.onSnapshot = onSnapshot;
+        window.collection = collection;
+        window.getDocs = getDocs;
+
+        let currentMode = 'viewer';
+        let scheduleData = {};
+        let currentConfig = {
+            startDate: '2025-06-01',
+            endDate: '2025-07-31',
+            labName: '분석연구소',
+            groups: [
+                { name: '#박유창', max: 8, color: '#ff6b6b' },
+                { name: '#신현석', max: 8, color: '#4834d4' },
+                { name: '#이지헌', max: 35, color: '#00d2d3' }
+            ],
+            analysts: [
+                { name: '김연구', emoji: '👨‍🔬' },
+                { name: '이분석', emoji: '👩‍🔬' },
+                { name: '박실험', emoji: '👨‍🔬' },
+                { name: '최테스트', emoji: '👩‍🔬' }
+            ],
+            holidays: ['2025-06-06', '2025-07-17'],
+            vacations: [
+                { analyst: '김연구', start: '2025-06-16', end: '2025-06-17' },
+                { analyst: '이분석', start: '2025-07-21', end: '2025-07-22' }
+            ]
+        };
+
+        // Firebase 연결 상태 업데이트
+        function updateFirebaseStatus(status, message) {
+            const statusElement = document.getElementById('firebaseStatus');
+            statusElement.className = `firebase-status firebase-${status}`;
+            
+            const icons = {
+                connected: '✅',
+                disconnected: '❌',
+                loading: '🔄'
+            };
+            
+            statusElement.textContent = `${icons[status]} ${message}`;
+        }
+
+        // DOM 로드 완료 후 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        // 앱 초기화
+        async function initializeApp() {
+            try {
+                updateFirebaseStatus('loading', 'Firebase 연결 중...');
+                
+                setupEventListeners();
+                await loadConfigurationFromFirebase();
+                await loadScheduleDataFromFirebase();
+                setupRealtimeListeners();
+                updateUI();
+                hideLoadingScreen();
+                
+                updateFirebaseStatus('connected', 'Firebase 연결됨 - 실시간 동기화 활성');
+                console.log('앱이 성공적으로 초기화되었습니다.');
+            } catch (error) {
+                console.error('앱 초기화 오류:', error);
+                updateFirebaseStatus('disconnected', 'Firebase 연결 실패');
+                showError('Firebase 연결에 실패했습니다. 인터넷 연결을 확인해주세요.');
+            }
+        }
+
+        // 로딩 화면 숨기기
+        function hideLoadingScreen() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('calendar').style.display = 'block';
+        }
+
+        // 에러 표시
+        function showError(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-error';
+            alertDiv.textContent = message;
+            document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.mode-selector'));
+            
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+
+        // 성공 메시지 표시
+        function showSuccess(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success';
+            alertDiv.textContent = message;
+            document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.mode-selector'));
+            
+            setTimeout(() => alertDiv.remove(), 3000);
+        }
+
+        // Firebase에서 설정 불러오기
+        async function loadConfigurationFromFirebase() {
+            try {
+                const configDoc = await getDoc(doc(db, 'labSchedule', 'config'));
+                if (configDoc.exists()) {
+                    currentConfig = configDoc.data();
+                    restoreUIData();
+                }
+            } catch (error) {
+                console.error('설정 불러오기 오류:', error);
+            }
+        }
+
+        // Firebase에서 스케줄 데이터 불러오기
+        async function loadScheduleDataFromFirebase() {
+            try {
+                const scheduleCollection = collection(db, 'labSchedule', 'data', 'allocations');
+                const snapshot = await getDocs(scheduleCollection);
+                
+                scheduleData = {};
+                snapshot.forEach((doc) => {
+                    scheduleData[doc.id] = doc.data();
+                });
+            } catch (error) {
+                console.error('스케줄 데이터 불러오기 오류:', error);
+            }
+        }
+
+        // 실시간 리스너 설정
+        function setupRealtimeListeners() {
+            // 설정 변경 리스너
+            onSnapshot(doc(db, 'labSchedule', 'config'), (doc) => {
+                if (doc.exists()) {
+                    currentConfig = doc.data();
+                    restoreUIData();
+                    updateUI();
+                    console.log('설정이 실시간으로 업데이트되었습니다.');
+                }
+            });
+
+            // 스케줄 데이터 변경 리스너
+            onSnapshot(collection(db, 'labSchedule', 'data', 'allocations'), (snapshot) => {
+                scheduleData = {};
+                snapshot.forEach((doc) => {
+                    scheduleData[doc.id] = doc.data();
+                });
+                updateCalendarView();
+                console.log('스케줄 데이터가 실시간으로 업데이트되었습니다.');
+            });
+        }
+
+        // Firebase에 설정 저장
+        async function saveConfigurationToFirebase() {
+            try {
+                await setDoc(doc(db, 'labSchedule', 'config'), currentConfig);
+                showSuccess('설정이 저장되고 모든 사용자에게 실시간으로 반영되었습니다!');
+            } catch (error) {
+                console.error('설정 저장 오류:', error);
+                showError('설정 저장에 실패했습니다.');
+            }
+        }
+
+        // Firebase에 할당 데이터 저장
+        async function saveAllocationToFirebase(date, allocations) {
+            try {
+                await setDoc(doc(db, 'labSchedule', 'data', 'allocations', date), {
+                    allocations: allocations,
+                    lastUpdated: new Date().toISOString()
+                });
+                showSuccess('할당이 저장되고 모든 사용자에게 실시간으로 반영되었습니다!');
+            } catch (error) {
+                console.error('할당 저장 오류:', error);
+                showError('할당 저장에 실패했습니다.');
+            }
+        }
+
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            // 모드 버튼
+            document.getElementById('viewerModeBtn').addEventListener('click', () => setMode('viewer'));
+            document.getElementById('adminModeBtn').addEventListener('click', () => setMode('admin'));
+
+            // 탭 버튼
+            document.getElementById('calendarTab').addEventListener('click', () => showTab('calendar'));
+            document.getElementById('allocationTab').addEventListener('click', () => showTab('allocation'));
+            document.getElementById('setupTab').addEventListener('click', () => showTab('setup'));
+            document.getElementById('exportTab').addEventListener('click', () => showTab('export'));
+
+            // 할당 관리
+            document.getElementById('allocationDate').addEventListener('change', loadAllocationData);
+            document.getElementById('copyPrevBtn').addEventListener('click', copyPreviousDay);
+            document.getElementById('saveAllocationBtn').addEventListener('click', saveAllocation);
+
+            // 설정 관리
+            document.getElementById('saveConfigBtn').addEventListener('click', saveConfiguration);
+            document.getElementById('resetDataBtn').addEventListener('click', resetData);
+            document.getElementById('addVacationBtn').addEventListener('click', addVacation);
+
+            // 내보내기
+            document.getElementById('exportCsvBtn').addEventListener('click', exportToCSV);
+            document.getElementById('exportJsonBtn').addEventListener('click', exportToJSON);
+            document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+            // 휴가 삭제 (이벤트 위임)
+            document.getElementById('vacationSettings').addEventListener('click', function(e) {
+                if (e.target.classList.contains('vacation-remove')) {
+                    e.target.closest('.vacation-row').remove();
+                }
+            });
+        }
+
+        // 모드 설정
+        function setMode(mode) {
+            try {
+                currentMode = mode;
+                document.body.className = mode === 'admin' ? 'admin-mode' : 'viewer-mode';
+                
+                document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+                
+                if (mode === 'viewer') {
+                    document.getElementById('viewerModeBtn').classList.add('active');
+                    showTab('calendar');
+                } else {
+                    document.getElementById('adminModeBtn').classList.add('active');
+                }
+            } catch (error) {
+                console.error('모드 설정 오류:', error);
+            }
+        }
+
+        // 탭 전환
+        function showTab(tabName) {
+            try {
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                const selectedContent = document.getElementById(tabName);
+                if (selectedContent) {
+                    selectedContent.classList.add('active');
+                }
+                
+                const selectedTab = document.getElementById(tabName + 'Tab');
+                if (selectedTab) {
+                    selectedTab.classList.add('active');
+                }
+                
+                if (tabName === 'allocation') {
+                    setupAllocationTab();
+                } else if (tabName === 'calendar') {
+                    updateCalendarView();
+                }
+            } catch (error) {
+                console.error('탭 전환 오류:', error);
+            }
+        }
+
+        // 할당 탭 설정
+        function setupAllocationTab() {
+            try {
+                const dateInput = document.getElementById('allocationDate');
+                if (dateInput && !dateInput.value) {
+                    const today = new Date().toISOString().split('T')[0];
+                    dateInput.value = today;
+                }
+                generateAllocationGrid();
+                loadAllocationData();
+            } catch (error) {
+                console.error('할당 탭 설정 오류:', error);
+            }
+        }
+
+        // 할당 그리드 생성
+        function generateAllocationGrid() {
+            try {
+                const grid = document.getElementById('allocationGrid');
+                if (!grid || !currentConfig.analysts || !currentConfig.groups) return;
+                
+                grid.innerHTML = '';
+                
+                currentConfig.analysts.forEach(analyst => {
+                    const analystDiv = document.createElement('div');
+                    analystDiv.className = 'analyst-allocation';
+                    
+                    let groupsHTML = '';
+                    currentConfig.groups.forEach((group, index) => {
+                        groupsHTML += `
+                            <div class="group-row">
+                                <div class="group-label" style="background-color: ${group.color || '#ccc'};">
+                                    ${group.name || '그룹'}
+                                </div>
+                                <input type="number" 
+                                       class="group-input" 
+                                       id="${analyst.name}_${index}" 
+                                       min="0" 
+                                       max="${group.max || 100}" 
+                                       value="0">
+                                <span class="total-display">/ ${group.max || 100}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    analystDiv.innerHTML = `
+                        <h4>${analyst.emoji || '👨‍🔬'} ${analyst.name || '분석원'}</h4>
+                        <div class="group-allocation">
+                            ${groupsHTML}
+                            <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 4px;">
+                                <strong>총 할당: <span id="${analyst.name}_total">0</span>개</strong>
+                            </div>
+                        </div>
+                    `;
+                    
+                    grid.appendChild(analystDiv);
+                });
+
+                // 입력 이벤트 리스너
+                grid.addEventListener('input', updateAllocationSummary);
+                grid.addEventListener('change', updateAllocationSummary);
+            } catch (error) {
+                console.error('할당 그리드 생성 오류:', error);
+            }
+        }
+
+        // 할당 데이터 로드
+        function loadAllocationData() {
+            try {
+                const selectedDate = document.getElementById('allocationDate')?.value;
+                if (!selectedDate) return;
+                
+                const isHoliday = currentConfig.holidays?.includes(selectedDate) || false;
+                const dayOfWeek = new Date(selectedDate).getDay();
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                
+                const alertElement = document.getElementById('allocationAlert');
+                
+                if (isHoliday || isWeekend) {
+                    if (alertElement) {
+                        alertElement.style.display = 'block';
+                        alertElement.textContent = '선택한 날짜는 공휴일 또는 주말입니다.';
+                    }
+                    return;
+                }
+                
+                const savedData = scheduleData[selectedDate];
+                if (savedData && savedData.allocations && currentConfig.analysts && currentConfig.groups) {
+                    currentConfig.analysts.forEach(analyst => {
+                        const analystData = savedData.allocations[analyst.name];
+                        if (analystData) {
+                            currentConfig.groups.forEach((group, index) => {
+                                const input = document.getElementById(`${analyst.name}_${index}`);
+                                if (input) {
+                                    input.value = analystData[group.name] || 0;
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                updateAllocationSummary();
+                if (alertElement) {
+                    alertElement.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('할당 데이터 로드 오류:', error);
+            }
+        }
+
+        // 할당 요약 업데이트
+        function updateAllocationSummary() {
+            try {
+                if (!currentConfig.groups || !currentConfig.analysts) return;
+                
+                let totalByGroup = {};
+                let totalByAnalyst = {};
+                
+                currentConfig.groups.forEach(group => {
+                    totalByGroup[group.name] = 0;
+                });
+                
+                currentConfig.analysts.forEach(analyst => {
+                    let analystTotal = 0;
+                    currentConfig.groups.forEach((group, index) => {
+                        const input = document.getElementById(`${analyst.name}_${index}`);
+                        if (input) {
+                            const value = parseInt(input.value) || 0;
+                            totalByGroup[group.name] += value;
+                            analystTotal += value;
+                        }
+                    });
+                    totalByAnalyst[analyst.name] = analystTotal;
+                    
+                    const totalSpan = document.getElementById(`${analyst.name}_total`);
+                    if (totalSpan) {
+                        totalSpan.textContent = analystTotal;
+                    }
+                });
+                
+                const summaryContent = document.getElementById('summaryContent');
+                const summarySection = document.getElementById('allocationSummary');
+                
+                if (summaryContent && summarySection) {
+                    let summaryHTML = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">';
+                    
+                    // 그룹별 요약
+                    summaryHTML += '<div><h5>그룹별 할당</h5>';
+                    currentConfig.groups.forEach(group => {
+                        const percentage = ((totalByGroup[group.name] / (group.max || 1)) * 100).toFixed(1);
+                        const color = percentage > 100 ? '#f44336' : percentage > 80 ? '#ff9800' : '#4caf50';
+                        summaryHTML += `
+                            <div style="margin-bottom: 5px;">
+                                <span style="color: ${group.color || '#666'}; font-weight: bold;">${group.name}:</span> 
+                                ${totalByGroup[group.name]}/${group.max || 0} 
+                                <span style="color: ${color};">(${percentage}%)</span>
+                            </div>
+                        `;
+                    });
+                    summaryHTML += '</div>';
+                    
+                    // 분석원별 요약
+                    summaryHTML += '<div><h5>분석원별 할당</h5>';
+                    currentConfig.analysts.forEach(analyst => {
+                        summaryHTML += `
+                            <div style="margin-bottom: 5px;">
+                                ${analyst.emoji || '👨‍🔬'} <strong>${analyst.name}:</strong> ${totalByAnalyst[analyst.name] || 0}개
+                            </div>
+                        `;
+                    });
+                    summaryHTML += '</div></div>';
+                    
+                    summaryContent.innerHTML = summaryHTML;
+                    summarySection.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('할당 요약 업데이트 오류:', error);
+            }
+        }
+
+        // 할당 저장 (Firebase)
+        async function saveAllocation() {
+            try {
+                const selectedDate = document.getElementById('allocationDate').value;
+                if (!selectedDate) {
+                    showError('날짜를 선택해주세요.');
+                    return;
+                }
+                
+                const allocations = {};
+                
+                currentConfig.analysts.forEach(analyst => {
+                    allocations[analyst.name] = {};
+                    currentConfig.groups.forEach((group, index) => {
+                        const input = document.getElementById(`${analyst.name}_${index}`);
+                        if (input) {
+                            allocations[analyst.name][group.name] = parseInt(input.value) || 0;
+                        }
+                    });
+                });
+                
+                // Firebase에 저장
+                await saveAllocationToFirebase(selectedDate, allocations);
+                
+                // 로컬 데이터도 업데이트
+                if (!scheduleData[selectedDate]) {
+                    scheduleData[selectedDate] = {};
+                }
+                scheduleData[selectedDate].allocations = allocations;
+                
+                updateCalendarView();
+            } catch (error) {
+                console.error('할당 저장 오류:', error);
+                showError('할당 저장 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 전날 복사
+        function copyPreviousDay() {
+            try {
+                const selectedDate = document.getElementById('allocationDate').value;
+                if (!selectedDate) {
+                    showError('날짜를 선택해주세요.');
+                    return;
+                }
+                
+                const prevDate = new Date(selectedDate);
+                prevDate.setDate(prevDate.getDate() - 1);
+                const prevDateStr = prevDate.toISOString().split('T')[0];
+                
+                const prevData = scheduleData[prevDateStr];
+                if (prevData && prevData.allocations) {
+                    currentConfig.analysts.forEach(analyst => {
+                        const analystData = prevData.allocations[analyst.name];
+                        if (analystData) {
+                            currentConfig.groups.forEach((group, index) => {
+                                const input = document.getElementById(`${analyst.name}_${index}`);
+                                if (input) {
+                                    input.value = analystData[group.name] || 0;
+                                }
+                            });
+                        }
+                    });
+                    updateAllocationSummary();
+                    showSuccess(`${prevDateStr} 데이터를 복사했습니다.`);
+                } else {
+                    showError('전날 데이터가 없습니다.');
+                }
+            } catch (error) {
+                console.error('전날 복사 오류:', error);
+                showError('전날 데이터 복사 중 오류가 발생했습니다.');
+            }
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            updateGroupInfo();
+            updateCalendarView();
+        }
+
+        // 그룹 정보 업데이트
+        function updateGroupInfo() {
+            try {
+                const groupInfo = document.getElementById('groupInfo');
+                if (!currentConfig.groups || currentConfig.groups.length === 0) {
+                    groupInfo.style.display = 'none';
+                    return;
+                }
+                
+                groupInfo.style.display = 'grid';
+                groupInfo.innerHTML = '';
+                
+                currentConfig.groups.forEach(group => {
+                    const card = document.createElement('div');
+                    card.className = 'group-card';
+                    card.style.background = `linear-gradient(135deg, ${group.color} 0%, ${group.color}dd 100%)`;
+                    card.innerHTML = `
+                        <h3>${group.name}</h3>
+                        <div class="max-count">최대 ${group.max}개</div>
+                        <div class="label">일일 최대 샘플 수</div>
+                    `;
+                    groupInfo.appendChild(card);
+                });
+            } catch (error) {
+                console.error('그룹 정보 업데이트 오류:', error);
+            }
+        }
+
+        // 캘린더 뷰 업데이트
+        function updateCalendarView() {
+            try {
+                const container = document.getElementById('calendarContainer');
+                const noDataAlert = document.getElementById('noDataAlert');
+                
+                if (!currentConfig.startDate || !currentConfig.endDate) {
+                    container.style.display = 'none';
+                    noDataAlert.style.display = 'block';
+                    return;
+                }
+                
+                noDataAlert.style.display = 'none';
+                container.style.display = 'grid';
+                container.innerHTML = '';
+                
+                const start = new Date(currentConfig.startDate);
+                const end = new Date(currentConfig.endDate);
+                
+                const months = getMonthsInRange(start, end);
+                
+                Object.keys(months).forEach(monthKey => {
+                    const monthContainer = document.createElement('div');
+                    monthContainer.className = 'month-container';
+                    
+                    const [year, month] = monthKey.split('-');
+                    const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+                    
+                    monthContainer.innerHTML = `
+                        <div class="month-header">📅 ${year}년 ${monthNames[parseInt(month) - 1]}</div>
+                        <div class="calendar">
+                            <div class="day-header">일</div>
+                            <div class="day-header">월</div>
+                            <div class="day-header">화</div>
+                            <div class="day-header">수</div>
+                            <div class="day-header">목</div>
+                            <div class="day-header">금</div>
+                            <div class="day-header">토</div>
+                            ${generateMonthCalendar(parseInt(year), parseInt(month) - 1)}
+                        </div>
+                    `;
+                    
+                    container.appendChild(monthContainer);
+                });
+            } catch (error) {
+                console.error('캘린더 뷰 업데이트 오류:', error);
+            }
+        }
+
+        // 월 범위 계산
+        function getMonthsInRange(start, end) {
+            const months = {};
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                if (!months[monthKey]) {
+                    months[monthKey] = [];
+                }
+                months[monthKey].push(new Date(d));
+            }
+            return months;
+        }
+
+        // 월별 캘린더 HTML 생성
+        function generateMonthCalendar(year, month) {
+            try {
+                const firstDay = new Date(year, month, 1);
+                const startDate = new Date(firstDay);
+                startDate.setDate(startDate.getDate() - firstDay.getDay());
+                
+                let html = '';
+                
+                for (let i = 0; i < 42; i++) {
+                    const currentDate = new Date(startDate);
+                    currentDate.setDate(startDate.getDate() + i);
+                    
+                    const dateStr = currentDate.toISOString().split('T')[0];
+                    const isCurrentMonth = currentDate.getMonth() === month;
+                    
+                    let cellClass = 'day-cell';
+                    let cellContent = '';
+                    
+                    if (!isCurrentMonth) {
+                        cellClass += ' weekend';
+                        cellContent = `<div class="day-number">${currentDate.getDate()}</div>`;
+                    } else {
+                        cellContent = generateDayContent(currentDate, dateStr);
+                        
+                        if (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
+                            cellClass += ' weekend';
+                        }
+                        else if (currentConfig.holidays?.includes(dateStr)) {
+                            cellClass += ' holiday';
+                        }
+                        else if (currentConfig.vacations?.some(v => v.start <= dateStr && dateStr <= v.end)) {
+                            cellClass += ' vacation';
+                        }
+                    }
+                    
+                    html += `<div class="${cellClass}">${cellContent}</div>`;
+                }
+                
+                return html;
+            } catch (error) {
+                console.error('월별 캘린더 생성 오류:', error);
+                return '';
+            }
+        }
+
+        // 일별 내용 생성
+        function generateDayContent(date, dateStr) {
+            try {
+                let content = `<div class="day-number">${date.getDate()}</div>`;
+                
+                if (currentConfig.holidays?.includes(dateStr)) {
+                    content += '<div style="font-size: 9px; color: #d32f2f;">공휴일</div>';
+                    return content;
+                }
+                
+                if (date.getDay() === 0 || date.getDay() === 6) {
+                    return content;
+                }
+                
+                const vacationAnalyst = currentConfig.vacations?.find(v => 
+                    v.start <= dateStr && dateStr <= v.end
+                );
+                if (vacationAnalyst) {
+                    content += `<div style="font-size: 9px; color: #f57c00;">${vacationAnalyst.analyst} 휴가</div>`;
+                }
+                
+                const dayData = scheduleData[dateStr];
+                if (dayData && dayData.allocations) {
+                    content += '<div class="group-samples">';
+                    
+                    currentConfig.groups.forEach(group => {
+                        let groupTotal = 0;
+                        Object.values(dayData.allocations).forEach(analystAlloc => {
+                            groupTotal += analystAlloc[group.name] || 0;
+                        });
+                        
+                        if (groupTotal > 0) {
+                            content += `<span class="group-tag" style="background: ${group.color};">${group.name.replace('#', '')}${groupTotal}</span>`;
+                        }
+                    });
+                    
+                    content += '</div>';
+                }
+                
+                return content;
+            } catch (error) {
+                console.error('일별 내용 생성 오류:', error);
+                return `<div class="day-number">${date.getDate()}</div>`;
+            }
+        }
+
+        // 설정 저장 (Firebase)
+        async function saveConfiguration() {
+            try {
+                // UI에서 데이터 수집
+                currentConfig.startDate = document.getElementById('startDate').value;
+                currentConfig.endDate = document.getElementById('endDate').value;
+                currentConfig.labName = document.getElementById('labName').value;
+                
+                currentConfig.groups = [
+                    {
+                        name: document.getElementById('group1Name').value,
+                        max: parseInt(document.getElementById('group1Max').value),
+                        color: document.getElementById('group1Color').value
+                    },
+                    {
+                        name: document.getElementById('group2Name').value,
+                        max: parseInt(document.getElementById('group2Max').value),
+                        color: document.getElementById('group2Color').value
+                    },
+                    {
+                        name: document.getElementById('group3Name').value,
+                        max: parseInt(document.getElementById('group3Max').value),
+                        color: document.getElementById('group3Color').value
+                    }
+                ];
+                
+                const analystNames = document.querySelectorAll('.analyst-name');
+                const analystEmojis = document.querySelectorAll('.analyst-emoji');
+                currentConfig.analysts = [];
+                for (let i = 0; i < analystNames.length; i++) {
+                    if (analystNames[i].value) {
+                        currentConfig.analysts.push({
+                            name: analystNames[i].value,
+                            emoji: analystEmojis[i].value || '👨‍🔬'
+                        });
+                    }
+                }
+                
+                currentConfig.holidays = document.getElementById('holidays').value
+                    .split(',')
+                    .map(d => d.trim())
+                    .filter(d => d);
+                
+                currentConfig.vacations = [];
+                const vacationRows = document.querySelectorAll('.vacation-row');
+                vacationRows.forEach(row => {
+                    const analyst = row.querySelector('.vacation-analyst')?.value;
+                    const start = row.querySelector('.vacation-start')?.value;
+                    const end = row.querySelector('.vacation-end')?.value;
+                    if (analyst && start && end) {
+                        currentConfig.vacations.push({ analyst, start, end });
+                    }
+                });
+                
+                // Firebase에 저장
+                await saveConfigurationToFirebase();
+                updateUI();
+            } catch (error) {
+                console.error('설정 저장 오류:', error);
+                showError('설정 저장 중 오류가 발생했습니다.');
+            }
+        }
+
+        // UI 데이터 복원
+        function restoreUIData() {
+            try {
+                const elements = {
+                    startDate: document.getElementById('startDate'),
+                    endDate: document.getElementById('endDate'),
+                    labName: document.getElementById('labName'),
+                    group1Name: document.getElementById('group1Name'),
+                    group1Max: document.getElementById('group1Max'),
+                    group1Color: document.getElementById('group1Color'),
+                    group2Name: document.getElementById('group2Name'),
+                    group2Max: document.getElementById('group2Max'),
+                    group2Color: document.getElementById('group2Color'),
+                    group3Name: document.getElementById('group3Name'),
+                    group3Max: document.getElementById('group3Max'),
+                    group3Color: document.getElementById('group3Color'),
+                    holidays: document.getElementById('holidays')
+                };
+
+                if (elements.startDate) elements.startDate.value = currentConfig.startDate || '2025-06-01';
+                if (elements.endDate) elements.endDate.value = currentConfig.endDate || '2025-07-31';
+                if (elements.labName) elements.labName.value = currentConfig.labName || '분석연구소';
+
+                if (currentConfig.groups && currentConfig.groups.length >= 3) {
+                    if (elements.group1Name) elements.group1Name.value = currentConfig.groups[0].name || '#박유창';
+                    if (elements.group1Max) elements.group1Max.value = currentConfig.groups[0].max || 8;
+                    if (elements.group1Color) elements.group1Color.value = currentConfig.groups[0].color || '#ff6b6b';
+                    
+                    if (elements.group2Name) elements.group2Name.value = currentConfig.groups[1].name || '#신현석';
+                    if (elements.group2Max) elements.group2Max.value = currentConfig.groups[1].max || 8;
+                    if (elements.group2Color) elements.group2Color.value = currentConfig.groups[1].color || '#4834d4';
+                    
+                    if (elements.group3Name) elements.group3Name.value = currentConfig.groups[2].name || '#이지헌';
+                    if (elements.group3Max) elements.group3Max.value = currentConfig.groups[2].max || 35;
+                    if (elements.group3Color) elements.group3Color.value = currentConfig.groups[2].color || '#00d2d3';
+                }
+
+                const analystNames = document.querySelectorAll('.analyst-name');
+                const analystEmojis = document.querySelectorAll('.analyst-emoji');
+                if (currentConfig.analysts) {
+                    currentConfig.analysts.forEach((analyst, index) => {
+                        if (analystNames[index]) {
+                            analystNames[index].value = analyst.name;
+                            analystEmojis[index].value = analyst.emoji;
+                        }
+                    });
+                }
+
+                if (elements.holidays && currentConfig.holidays) {
+                    elements.holidays.value = currentConfig.holidays.join(',');
+                }
+            } catch (error) {
+                console.error('UI 데이터 복원 오류:', error);
+            }
+        }
+
+        // 휴가 추가
+        function addVacation() {
+            try {
+                const vacationSettings = document.getElementById('vacationSettings');
+                const newVacation = document.createElement('div');
+                newVacation.className = 'vacation-row';
+                newVacation.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;';
+                
+                let analystOptions = '';
+                currentConfig.analysts.forEach(analyst => {
+                    analystOptions += `<option value="${analyst.name}">${analyst.name}</option>`;
+                });
+                
+                newVacation.innerHTML = `
+                    <select class="vacation-analyst">
+                        ${analystOptions}
+                    </select>
+                    <input type="date" class="vacation-start">
+                    <input type="date" class="vacation-end">
+                    <button type="button" class="btn btn-secondary vacation-remove">삭제</button>
+                `;
+                vacationSettings.appendChild(newVacation);
+            } catch (error) {
+                console.error('휴가 추가 오류:', error);
+            }
+        }
+
+        // 데이터 초기화 (Firebase)
+        async function resetData() {
+            if (confirm('모든 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없으며 모든 사용자의 데이터가 삭제됩니다.')) {
+                try {
+                    // Firebase 데이터 초기화
+                    await setDoc(doc(db, 'labSchedule', 'config'), {
+                        startDate: '2025-06-01',
+                        endDate: '2025-07-31',
+                        labName: '분석연구소',
+                        groups: [
+                            { name: '#박유창', max: 8, color: '#ff6b6b' },
+                            { name: '#신현석', max: 8, color: '#4834d4' },
+                            { name: '#이지헌', max: 35, color: '#00d2d3' }
+                        ],
+                        analysts: [
+                            { name: '김연구', emoji: '👨‍🔬' },
+                            { name: '이분석', emoji: '👩‍🔬' },
+                            { name: '박실험', emoji: '👨‍🔬' },
+                            { name: '최테스트', emoji: '👩‍🔬' }
+                        ],
+                        holidays: ['2025-06-06', '2025-07-17'],
+                        vacations: [
+                            { analyst: '김연구', start: '2025-06-16', end: '2025-06-17' },
+                            { analyst: '이분석', start: '2025-07-21', end: '2025-07-22' }
+                        ]
+                    });
+                    
+                    // 할당 데이터 컬렉션 삭제는 직접적으로 불가능하므로
+                    // 사용자에게 알림만 표시
+                    showSuccess('설정이 초기화되었습니다. 할당 데이터는 수동으로 관리해주세요.');
+                    
+                    location.reload();
+                } catch (error) {
+                    console.error('데이터 초기화 오류:', error);
+                    showError('데이터 초기화 중 오류가 발생했습니다.');
+                }
+            }
+        }
+
+        // CSV 내보내기
+        function exportToCSV() {
+            try {
+                if (!scheduleData || Object.keys(scheduleData).length === 0) {
+                    showError('내보낼 데이터가 없습니다.');
+                    return;
+                }
+                
+                let csv = '날짜,요일';
+                currentConfig.groups.forEach(group => {
+                    csv += `,${group.name}`;
+                });
+                currentConfig.analysts.forEach(analyst => {
+                    csv += `,${analyst.name}`;
+                });
+                csv += '\n';
+                
+                const start = new Date(currentConfig.startDate);
+                const end = new Date(currentConfig.endDate);
+                
+                for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.toISOString().split('T')[0];
+                    const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+                    
+                    csv += `${dateStr},${dayOfWeek}`;
+                    
+                    const dayData = scheduleData[dateStr];
+                    
+                    currentConfig.groups.forEach(group => {
+                        let groupTotal = 0;
+                        if (dayData && dayData.allocations) {
+                            Object.values(dayData.allocations).forEach(analystAlloc => {
+                                groupTotal += analystAlloc[group.name] || 0;
+                            });
+                        }
+                        csv += `,${groupTotal}`;
+                    });
+                    
+                    currentConfig.analysts.forEach(analyst => {
+                        let analystTotal = 0;
+                        if (dayData && dayData.allocations && dayData.allocations[analyst.name]) {
+                            analystTotal = Object.values(dayData.allocations[analyst.name]).reduce((sum, val) => sum + (val || 0), 0);
+                        }
+                        csv += `,${analystTotal}`;
+                    });
+                    
+                    csv += '\n';
+                }
+                
+                downloadFile(csv, 'lab_schedule.csv', 'text/csv');
+                showSuccess('CSV 파일이 다운로드되었습니다.');
+            } catch (error) {
+                console.error('CSV 내보내기 오류:', error);
+                showError('CSV 내보내기 중 오류가 발생했습니다.');
+            }
+        }
+
+        // JSON 내보내기
+        function exportToJSON() {
+            try {
+                const exportData = {
+                    config: currentConfig,
+                    scheduleData: scheduleData,
+                    exported: new Date().toISOString()
+                };
+                
+                downloadFile(JSON.stringify(exportData, null, 2), 'lab_schedule.json', 'application/json');
+                showSuccess('JSON 파일이 다운로드되었습니다.');
+            } catch (error) {
+                console.error('JSON 내보내기 오류:', error);
+                showError('JSON 내보내기 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 파일 다운로드
+        function downloadFile(content, filename, mimeType) {
+            try {
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('파일 다운로드 오류:', error);
+                showError('파일 다운로드 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 전역 함수로 노출
+        window.setMode = setMode;
+        window.showTab = showTab;
+        window.setupAllocationTab = setupAllocationTab;
+        window.generateAllocationGrid = generateAllocationGrid;
+        window.loadAllocationData = loadAllocationData;
+        window.updateAllocationSummary = updateAllocationSummary;
+        window.saveAllocation = saveAllocation;
+        window.copyPreviousDay = copyPreviousDay;
+        window.updateUI = updateUI;
+        window.updateGroupInfo = updateGroupInfo;
+        window.updateCalendarView = updateCalendarView;
+        window.getMonthsInRange = getMonthsInRange;
+        window.generateMonthCalendar = generateMonthCalendar;
+        window.generateDayContent = generateDayContent;
+        window.saveConfiguration = saveConfiguration;
+        window.restoreUIData = restoreUIData;
+        window.addVacation = addVacation;
+        window.resetData = resetData;
+        window.exportToCSV = exportToCSV;
+        window.exportToJSON = exportToJSON;
+        window.downloadFile = downloadFile;
+        window.showError = showError;
+        window.showSuccess = showSuccess;
+    </script>
+</body>
+</html>
+
+<!-- Firebase 프로젝트 설정 가이드 -->
+<!--
+🔥 Firebase 설정 방법:
+
+1. Firebase Console 접속
+   - https://console.firebase.google.com/ 접속
+   - "프로젝트 추가" 클릭
+
+2. 프로젝트 생성
+   - 프로젝트 이름: lab-schedule-system
+   - Google 애널리틱스: 비활성화 (선택사항)
+   - 프로젝트 만들기 클릭
+
+3. 웹 앱 추가
+   - 프로젝트 개요에서 웹 아이콘(</>) 클릭
+   - 앱 닉네임: 연구소 스케줄 시스템
+   - Firebase 호스팅: 체크 (선택사항)
+   - 앱 등록 클릭
+
+4. Firebase 설정 복사
+   - 생성된 firebaseConfig 객체를 위 코드의 firebaseConfig에 교체
+
+5. Firestore 데이터베이스 설정
+   - 왼쪽 메뉴에서 "Firestore Database" 클릭
+   - 데이터베이스 만들기
+   - 프로덕션 모드로 시작
+   - 위치: asia-northeast3 (서울) 선택
+
+6. 보안 규칙 설정
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /{document=**} {
+         allow read, write: if true;
+       }
+     }
+   }
+
+7. 웹 호스팅 설정 (선택사항)
+   - 왼쪽 메뉴에서 "Hosting" 클릭
+   - 시작하기 클릭
+   - Firebase CLI 설치 및 배포
+
+🚀 사용법:
+1. 위 HTML 파일을 index.html로 저장
+2. firebaseConfig 교체
+3. GitHub Pages 또는 Firebase Hosting에 배포
+4. 관리자가 설정 입력 → 실시간으로 모든 사용자에게 반영
+5. 할당 관리 → 실시간 동기화
+
+✅ 주요 기능:
+- ✅ 실시간 데이터 동기화
+- ✅ 클라우드 저장 (데이터 손실 방지)
+- ✅ 여러 기기에서 동시 접속
+- ✅ 관리자/뷰어 모드 구분
+- ✅ 무료 사용 (Firebase Spark 플랜)
+- ✅ 모바일 최적화
+-->
+
+<!-- Firebase 보안 규칙 (Firestore Rules) -->
+<!--
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 모든 사용자에게 읽기/쓰기 권한 허용 (간단한 설정)
+    match /{document=**} {
+      allow read, write: if true;
+    }
+    
+    // 더 안전한 설정 (추천)
+    match /labSchedule/{document} {
+      allow read: if true;  // 모든 사용자 읽기 가능
+      allow write: if true; // 현재는 모든 사용자 쓰기 가능
+                           // 나중에 인증 시스템 추가 시 제한 가능
+    }
+  }
+}
+-->

@@ -475,6 +475,23 @@
                 align-items: stretch;
             }
         }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .summary-table th, .summary-table td {
+            border: 1px solid #dadce0;
+            padding: 8px;
+            text-align: left;
+        }
+        .summary-table th {
+            background-color: #f1f3f4;
+            font-weight: bold;
+        }
+        .summary-table td:not(:first-child) { /* Align numbers to the right */
+            text-align: right;
+        }
     </style>
 </head>
 <body>
@@ -495,6 +512,7 @@
         
         <div class="tab-container">
             <button class="tab active" id="calendarTab">📅 스케줄 보기</button>
+            <button class="tab" id="weeklySummaryTab">📊 주간 요약</button>
             <button class="tab admin-only" id="allocationTab">📊 할당 관리</button>
             <button class="tab admin-only" id="setupTab">⚙️ 기본 설정</button>
             <button class="tab admin-only" id="exportTab">💾 내보내기</button>
@@ -518,6 +536,32 @@
             
             <div class="monthly-grid" id="calendarContainer" style="display: none;">
                 <!-- 캘린더가 여기에 동적으로 생성됩니다 -->
+            </div>
+        </div>
+
+        <!-- 주간 요약 탭 -->
+        <div id="weeklySummary" class="tab-content">
+            <div class="input-section">
+                <h3>주간/분석원별 샘플 할당 요약</h3>
+                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+                    <div class="form-group">
+                        <label for="summaryStartDate">시작 날짜:</label>
+                        <input type="date" id="summaryStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="summaryDuration">기간:</label>
+                        <select id="summaryDuration">
+                            <option value="1" selected>1 주</option>
+                            <option value="2">2 주</option>
+                            <option value="4">4 주</option>
+                        </select>
+                    </div>
+                    <button class="btn" id="viewSummaryBtn" style="align-self: flex-end;">📈 요약 보기</button>
+                </div>
+                <div id="summaryResultsContainer" style="margin-top: 20px; overflow-x: auto;">
+                    <!-- Summary table will be rendered here by JavaScript -->
+                    <p id="noSummaryDataMsg" style="display: none;">선택된 기간에 할당된 샘플이 없습니다.</p>
+                </div>
             </div>
         </div>
         
@@ -891,6 +935,7 @@
 
             // 탭 버튼
             document.getElementById('calendarTab').addEventListener('click', () => showTab('calendar'));
+            document.getElementById('weeklySummaryTab').addEventListener('click', () => showTab('weeklySummary'));
             document.getElementById('allocationTab').addEventListener('click', () => showTab('allocation'));
             document.getElementById('setupTab').addEventListener('click', () => showTab('setup'));
             document.getElementById('exportTab').addEventListener('click', () => showTab('export'));
@@ -916,6 +961,15 @@
                     e.target.closest('.vacation-row').remove();
                 }
             });
+
+            // 주간 요약 보기 버튼
+            document.getElementById('viewSummaryBtn').addEventListener('click', renderWeeklySummary);
+
+            // 주간 요약 시작 날짜 기본값 설정 (오늘)
+            const summaryStartDateInput = document.getElementById('summaryStartDate');
+            if (summaryStartDateInput && !summaryStartDateInput.value) {
+                summaryStartDateInput.value = new Date().toISOString().split('T')[0];
+            }
         }
 
         // 모드 설정
@@ -1774,6 +1828,126 @@
                 console.error('파일 다운로드 오류:', error);
                 showError('파일 다운로드 중 오류가 발생했습니다.');
             }
+        }
+
+        // 주간 요약 데이터 집계 함수
+        function aggregateScheduleForSummary(startDateStr, durationInWeeks) {
+            const startDate = new Date(startDateStr);
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + (durationInWeeks * 7) - 1);
+
+            const aggregatedData = {};
+
+            // Initialize structure for all analysts and groups
+            if (currentConfig.analysts && currentConfig.groups) {
+                currentConfig.analysts.forEach(analyst => {
+                    aggregatedData[analyst.name] = {
+                        emoji: analyst.emoji,
+                        groupCounts: {},
+                        totalSamples: 0
+                    };
+                    currentConfig.groups.forEach(group => {
+                        aggregatedData[analyst.name].groupCounts[group.name] = 0;
+                    });
+                });
+            }
+
+            for (let currentDate = new Date(startDate); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
+                // Create a UTC date at midnight, then convert to ISO string YYYY-MM-DD part
+                const dateKey = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())).toISOString().split('T')[0];
+
+                if (scheduleData[dateKey] && scheduleData[dateKey].allocations) {
+                    for (const analystName in scheduleData[dateKey].allocations) {
+                        if (aggregatedData[analystName]) { // Ensure analyst exists in our config
+                            const analystAllocations = scheduleData[dateKey].allocations[analystName];
+                            for (const groupName in analystAllocations) {
+                                if (aggregatedData[analystName].groupCounts.hasOwnProperty(groupName)) { // Ensure group exists
+                                    const count = analystAllocations[groupName] || 0;
+                                    aggregatedData[analystName].groupCounts[groupName] += count;
+                                    aggregatedData[analystName].totalSamples += count;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Convert to array, ensuring order and inclusion of all configured analysts
+            const summaryArray = currentConfig.analysts.map(analyst => {
+                const data = aggregatedData[analyst.name];
+                return {
+                    analystName: analyst.name,
+                    analystEmoji: data ? data.emoji : analyst.emoji, // Fallback to config emoji
+                    groupCounts: data ? data.groupCounts : {}, // Fallback to empty if no data
+                    totalSamples: data ? data.totalSamples : 0 // Fallback to 0 if no data
+                };
+            });
+
+            return summaryArray;
+        }
+
+        // 주간 요약 렌더링 함수
+        function renderWeeklySummary() {
+            const startDateStr = document.getElementById('summaryStartDate').value;
+            const durationInWeeks = parseInt(document.getElementById('summaryDuration').value);
+
+            if (!startDateStr) {
+                showError("시작 날짜를 선택해주세요.");
+                return;
+            }
+
+            const summaryDataArray = aggregateScheduleForSummary(startDateStr, durationInWeeks);
+            const resultsContainer = document.getElementById('summaryResultsContainer');
+            const noDataMsg = document.getElementById('noSummaryDataMsg');
+
+            resultsContainer.innerHTML = ''; // 이전 결과 초기화
+
+            const hasData = summaryDataArray.some(analyst => analyst.totalSamples > 0);
+
+            if (!hasData) {
+                noDataMsg.style.display = 'block';
+                return;
+            }
+            noDataMsg.style.display = 'none';
+
+            const table = document.createElement('table');
+            table.className = 'summary-table';
+
+            // Table Header
+            const thead = table.createTHead();
+            const headerRow = thead.insertRow();
+
+            let th = document.createElement('th');
+            th.textContent = '분석원';
+            headerRow.appendChild(th);
+
+            currentConfig.groups.forEach(group => {
+                th = document.createElement('th');
+                th.textContent = group.name;
+                headerRow.appendChild(th);
+            });
+
+            th = document.createElement('th');
+            th.textContent = '총계 (기간)';
+            headerRow.appendChild(th);
+
+            // Table Body
+            const tbody = table.createTBody();
+            summaryDataArray.forEach(analystSummary => {
+                const row = tbody.insertRow();
+                row.insertCell().textContent = (analystSummary.analystEmoji || '👤') + ' ' + analystSummary.analystName;
+
+                currentConfig.groups.forEach(group => {
+                    const count = analystSummary.groupCounts[group.name] || 0;
+                    row.insertCell().textContent = count;
+                });
+
+                const totalCell = row.insertCell();
+                totalCell.textContent = analystSummary.totalSamples;
+                totalCell.style.fontWeight = 'bold';
+            });
+
+            resultsContainer.appendChild(table);
         }
 
     </script>

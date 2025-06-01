@@ -483,9 +483,9 @@
         <div class="subtitle">실시간 공유 시스템 (Firebase)</div>
         
         <!-- Firebase 연결 상태 -->
-        <div id="firebaseStatus" class="firebase-status firebase-loading">
+        <!-- <div id="firebaseStatus" class="firebase-status firebase-loading">
             🔥 Firebase 연결 중...
-        </div>
+        </div> -->
         
         <div class="mode-selector">
             <h3>접근 모드 선택</h3>
@@ -742,18 +742,18 @@
         };
 
         // Firebase 연결 상태 업데이트
-        function updateFirebaseStatus(status, message) {
-            const statusElement = document.getElementById('firebaseStatus');
-            statusElement.className = `firebase-status firebase-${status}`;
+        // function updateFirebaseStatus(status, message) {
+        //     const statusElement = document.getElementById('firebaseStatus');
+        //     statusElement.className = `firebase-status firebase-${status}`;
             
-            const icons = {
-                connected: '✅',
-                disconnected: '❌',
-                loading: '🔄'
-            };
+        //     const icons = {
+        //         connected: '✅',
+        //         disconnected: '❌',
+        //         loading: '🔄'
+        //     };
             
-            statusElement.textContent = `${icons[status]} ${message}`;
-        }
+        //     statusElement.textContent = `${icons[status]} ${message}`;
+        // }
 
         // DOM 로드 완료 후 초기화
         document.addEventListener('DOMContentLoaded', function() {
@@ -763,7 +763,7 @@
         // 앱 초기화
         async function setupLabScheduleApp() {
             try {
-                updateFirebaseStatus('loading', 'Firebase 연결 중...');
+                // updateFirebaseStatus('loading', 'Firebase 연결 중...');
                 
                 setupEventListeners();
                 await loadConfigurationFromFirebase();
@@ -772,11 +772,11 @@
                 updateUI();
                 hideLoadingScreen();
                 
-                updateFirebaseStatus('connected', 'Firebase 연결됨 - 실시간 동기화 활성');
+                // updateFirebaseStatus('connected', 'Firebase 연결됨 - 실시간 동기화 활성');
                 console.log('앱이 성공적으로 초기화되었습니다.');
             } catch (error) {
                 console.error('앱 초기화 오류:', error);
-                updateFirebaseStatus('disconnected', 'Firebase 연결 실패');
+                // updateFirebaseStatus('disconnected', 'Firebase 연결 실패');
                 showError('Firebase 연결에 실패했습니다. 인터넷 연결을 확인해주세요.');
             }
         }
@@ -934,7 +934,9 @@
                         document.getElementById('adminModeBtn').classList.add('active');
                         // 관리자 모드 진입 시 기본 탭을 설정하거나, 마지막 탭을 유지할 수 있음
                         // 여기서는 기본으로 allocation 탭을 보여주도록 설정
+
                         showTab('allocation'); 
+
                     } else if (password !== null) { // 사용자가 취소를 누르지 않았지만 비밀번호가 틀린 경우
                         alert("비밀번호가 올바르지 않습니다.");
                         return; // 모드 변경 중단
@@ -1389,24 +1391,32 @@
         // 일별 내용 생성
         function generateDayContent(date, dateStr) {
             try {
+                const localYear = date.getFullYear();
+                const localMonth = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+                const localDay = String(date.getDate()).padStart(2, '0');
+                const localDateStringForComparison = `${localYear}-${localMonth}-${localDay}`;
+
                 let content = `<div class="day-number">${date.getDate()}</div>`;
                 
-                if (currentConfig.holidays?.includes(dateStr)) {
+                if (currentConfig.holidays?.includes(localDateStringForComparison)) {
                     content += '<div style="font-size: 9px; color: #d32f2f;">공휴일</div>';
-                    return content;
+                    // If other markers can co-exist with holidays, don't return here.
+                    // Based on original logic, holiday display was exclusive for its main text.
+                    // We might still want to show allocations even on a holiday.
+                    // For now, let's allow other content to be added after "공휴일".
                 }
                 
-                if (date.getDay() === 0 || date.getDay() === 6) {
-                    return content;
-                }
-                
+                // Weekends might still have vacations or allocations, so don't return immediately.
+                // The styling for .weekend class handles the visual distinction.
+
                 const vacationAnalyst = currentConfig.vacations?.find(v => 
-                    v.start <= dateStr && dateStr <= v.end
+                    v.start <= localDateStringForComparison && localDateStringForComparison <= v.end
                 );
                 if (vacationAnalyst) {
                     content += `<div style="font-size: 9px; color: #f57c00;">${vacationAnalyst.analyst} 휴가</div>`;
                 }
                 
+                // Note: dayData is still fetched using dateStr (UTC string) as keys are stored this way.
                 const dayData = scheduleData[dateStr];
                 if (dayData && dayData.allocations) {
                     content += '<div class="group-samples">';
@@ -1423,7 +1433,7 @@
                     });
                     
                     content += '</div>';
-                    
+
                     // Analyst-specific counts
                     if (currentConfig.analysts && currentConfig.analysts.length > 0) {
                         currentConfig.analysts.forEach(analyst => {
@@ -1557,6 +1567,35 @@
 
                 if (elements.holidays && currentConfig.holidays) {
                     elements.holidays.value = currentConfig.holidays.join(',');
+                }
+
+                // 휴가 설정 복원
+                const vacationSettingsDiv = document.getElementById('vacationSettings');
+                if (vacationSettingsDiv) {
+                    vacationSettingsDiv.innerHTML = ''; // 기존 내용 초기화
+                    if (currentConfig.vacations && Array.isArray(currentConfig.vacations)) {
+                        currentConfig.vacations.forEach(vacationItem => {
+                            const vacationRow = document.createElement('div');
+                            vacationRow.className = 'vacation-row';
+                            vacationRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;';
+
+                            let analystOptionsHTML = '';
+                            if (currentConfig.analysts && typeof currentConfig.analysts.forEach === 'function') {
+                                currentConfig.analysts.forEach(analyst => {
+                                    const isSelected = analyst.name === vacationItem.analyst ? 'selected' : '';
+                                    analystOptionsHTML += `<option value="${analyst.name}" ${isSelected}>${analyst.name}</option>`;
+                                });
+                            }
+
+                            vacationRow.innerHTML = `
+                                <select class="vacation-analyst">${analystOptionsHTML}</select>
+                                <input type="date" class="vacation-start" value="${vacationItem.start || ''}">
+                                <input type="date" class="vacation-end" value="${vacationItem.end || ''}">
+                                <button type="button" class="btn btn-secondary vacation-remove">삭제</button>
+                            `;
+                            vacationSettingsDiv.appendChild(vacationRow);
+                        });
+                    }
                 }
             } catch (error) {
                 console.error('UI 데이터 복원 오류:', error);

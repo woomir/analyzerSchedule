@@ -263,7 +263,7 @@
         }
         
         .vacation {
-            background: #fff3e0;
+            /* background: #fff3e0; */ /* Removed */
         }
         
         /* 할당 관리 스타일 */
@@ -1388,11 +1388,12 @@
                             cellClass += ' holiday'; // Applies gray background and red text
                         }
 
-                        // Vacation check - applies vacation background only if not a holiday
-                        let isVacation = currentConfig.vacations?.some(v => v.start <= localDateStringForComparison && localDateStringForComparison <= v.end);
-                        if (isVacation && !isHoliday) {
-                            cellClass += ' vacation';
-                        }
+                        // Vacation check - textual indication is handled by generateDayContent.
+                        // We no longer add a specific 'vacation' class for background styling here.
+                        // let isVacation = currentConfig.vacations?.some(v => v.start <= localDateStringForComparison && localDateStringForComparison <= v.end);
+                        // if (isVacation && !isHoliday) {
+                        //     // cellClass += ' vacation'; // No longer adding vacation class for background
+                        // }
                     }
                     
                     html += `<div class="${cellClass}">${cellContent}</div>`;

@@ -509,6 +509,7 @@
             <button class="mode-btn active" id="viewerModeBtn">👁️ 뷰어 모드 (일반 사용자)</button>
             <button class="mode-btn" id="adminModeBtn">⚙️ 관리자 모드</button>
         </div>
+        <button id="enableRealtimeBtn" style="display: block; margin: 15px auto; padding: 10px 20px; background-color: #ffc107; color: black; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">Enable Real-time Sync (For Testing)</button>
         
         <div class="tab-container">
             <button class="tab active" id="calendarTab">📅 스케줄 보기</button>
@@ -558,9 +559,11 @@
                     </div>
                     <button class="btn" id="viewSummaryBtn" style="align-self: flex-end;">📈 요약 보기</button>
                 </div>
-                <div id="summaryResultsContainer" style="margin-top: 20px; overflow-x: auto;">
-                    <!-- Summary table will be rendered here by JavaScript -->
+                <div id="summaryDisplayArea" style="margin-top: 20px;"> <!-- Optional: new wrapper for layout -->
                     <p id="noSummaryDataMsg" style="display: none;">선택된 기간에 할당된 샘플이 없습니다.</p>
+                    <div id="summaryResultsContainer" style="overflow-x: auto;">
+                        <!-- Summary table will be rendered here by JavaScript -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -812,7 +815,7 @@
                 setupEventListeners();
                 await loadConfigurationFromFirebase();
                 await loadScheduleDataFromFirebase();
-                setupRealtimeListeners();
+                // setupRealtimeListeners(); // Temporarily disabled for diagnostics
                 updateUI();
                 hideLoadingScreen();
                 
@@ -969,6 +972,31 @@
             const summaryStartDateInput = document.getElementById('summaryStartDate');
             if (summaryStartDateInput && !summaryStartDateInput.value) {
                 summaryStartDateInput.value = new Date().toISOString().split('T')[0];
+            }
+
+            const enableRealtimeBtn = document.getElementById('enableRealtimeBtn');
+            if (enableRealtimeBtn) {
+                enableRealtimeBtn.addEventListener('click', () => {
+                    try {
+                        console.log("User clicked: Attempting to enable real-time listeners...");
+                        setupRealtimeListeners(); // Call the original function
+                        enableRealtimeBtn.textContent = 'Real-time Sync Enabled (Attempted)';
+                        enableRealtimeBtn.style.backgroundColor = '#28a745'; // Green
+                        enableRealtimeBtn.style.color = 'white';
+                        enableRealtimeBtn.disabled = true;
+                        console.log("Real-time listeners setup initiated by user.");
+                    } catch (e) {
+                        console.error("Error enabling real-time listeners via button:", e);
+                        showError("Error enabling real-time sync. Check console.");
+                        if(enableRealtimeBtn) { // Check again in case it was removed or error occurred before variable was set
+                             enableRealtimeBtn.textContent = 'Error Enabling Sync';
+                             enableRealtimeBtn.style.backgroundColor = '#dc3545'; // Red
+                             enableRealtimeBtn.style.color = 'white';
+                        }
+                    }
+                });
+            } else {
+                console.warn("#enableRealtimeBtn not found. Real-time sync cannot be enabled by user button.");
             }
         }
 

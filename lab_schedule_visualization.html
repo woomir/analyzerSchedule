@@ -716,6 +716,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        const ADMIN_PASSWORD = "admin123"; // 관리자 비밀번호
         let currentMode = 'viewer';
         let scheduleData = {};
         let currentConfig = {
@@ -920,19 +921,41 @@
         // 모드 설정
         function setMode(mode) {
             try {
-                currentMode = mode;
-                document.body.className = mode === 'admin' ? 'admin-mode' : 'viewer-mode';
-                
-                document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-                
-                if (mode === 'viewer') {
+                if (mode === 'admin') {
+                    if (currentMode === 'admin') {
+                        // 이미 관리자 모드이면 추가 작업 없음
+                        return;
+                    }
+                    const password = prompt("관리자 비밀번호를 입력하세요:");
+                    if (password === ADMIN_PASSWORD) {
+                        currentMode = 'admin';
+                        document.body.className = 'admin-mode';
+                        document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+                        document.getElementById('adminModeBtn').classList.add('active');
+                        // 관리자 모드 진입 시 기본 탭을 설정하거나, 마지막 탭을 유지할 수 있음
+                        // 여기서는 기본으로 allocation 탭을 보여주도록 설정
+                        showTab('allocation');
+                    } else if (password !== null) { // 사용자가 취소를 누르지 않았지만 비밀번호가 틀린 경우
+                        alert("비밀번호가 올바르지 않습니다.");
+                        return; // 모드 변경 중단
+                    } else { // 사용자가 프롬프트에서 취소를 누른 경우
+                        return; // 모드 변경 중단
+                    }
+                } else if (mode === 'viewer') {
+                    currentMode = 'viewer';
+                    document.body.className = 'viewer-mode';
+                    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
                     document.getElementById('viewerModeBtn').classList.add('active');
                     showTab('calendar');
-                } else {
-                    document.getElementById('adminModeBtn').classList.add('active');
                 }
             } catch (error) {
                 console.error('모드 설정 오류:', error);
+                // 오류 발생 시 안전하게 뷰어 모드로 전환
+                currentMode = 'viewer';
+                document.body.className = 'viewer-mode';
+                document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById('viewerModeBtn').classList.add('active');
+                showTab('calendar');
             }
         }
 
@@ -1400,6 +1423,18 @@
                     });
                     
                     content += '</div>';
+
+                    // Analyst-specific counts
+                    if (currentConfig.analysts && currentConfig.analysts.length > 0) {
+                        currentConfig.analysts.forEach(analyst => {
+                            if (dayData.allocations[analyst.name]) {
+                                const analystTotal = Object.values(dayData.allocations[analyst.name]).reduce((sum, count) => sum + (count || 0), 0);
+                                if (analystTotal > 0) {
+                                    content += `<div style="font-size: 9px; margin-top: 3px; color: #333;">${analyst.emoji || '👤'} ${analyst.name}: ${analystTotal}개</div>`;
+                                }
+                            }
+                        });
+                    }
                 }
                 
                 return content;

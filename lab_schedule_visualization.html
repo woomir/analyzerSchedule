@@ -509,7 +509,6 @@
             <button class="mode-btn active" id="viewerModeBtn">👁️ 뷰어 모드 (일반 사용자)</button>
             <button class="mode-btn" id="adminModeBtn">⚙️ 관리자 모드</button>
         </div>
-        <button id="enableRealtimeBtn" style="display: block; margin: 15px auto; padding: 10px 20px; background-color: #ffc107; color: black; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">Enable Real-time Sync (For Testing)</button>
         
         <div class="tab-container">
             <button class="tab active" id="calendarTab">📅 스케줄 보기</button>
@@ -747,7 +746,7 @@
     <script type="module">
         // Firebase 설정 및 초기화
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         // Firebase 설정 (이 설정은 공개되어도 안전합니다)
         const firebaseConfig = {
@@ -815,7 +814,7 @@
                 setupEventListeners();
                 await loadConfigurationFromFirebase();
                 await loadScheduleDataFromFirebase();
-                // setupRealtimeListeners(); // Temporarily disabled for diagnostics
+                // setupRealtimeListeners(); // Ensure this is commented or removed
                 updateUI();
                 hideLoadingScreen();
                 
@@ -880,29 +879,6 @@
             } catch (error) {
                 console.error('스케줄 데이터 불러오기 오류:', error);
             }
-        }
-
-        // 실시간 리스너 설정
-        function setupRealtimeListeners() {
-            // 설정 변경 리스너
-            onSnapshot(doc(db, 'labSchedule', 'config'), (doc) => {
-                if (doc.exists()) {
-                    currentConfig = doc.data();
-                    restoreUIData();
-                    updateUI();
-                    console.log('설정이 실시간으로 업데이트되었습니다.');
-                }
-            });
-
-            // 스케줄 데이터 변경 리스너
-            onSnapshot(collection(db, 'labSchedule', 'data', 'allocations'), (snapshot) => {
-                scheduleData = {};
-                snapshot.forEach((doc) => {
-                    scheduleData[doc.id] = doc.data();
-                });
-                updateCalendarView();
-                console.log('스케줄 데이터가 실시간으로 업데이트되었습니다.');
-            });
         }
 
         // Firebase에 설정 저장
@@ -974,30 +950,6 @@
                 summaryStartDateInput.value = new Date().toISOString().split('T')[0];
             }
 
-            const enableRealtimeBtn = document.getElementById('enableRealtimeBtn');
-            if (enableRealtimeBtn) {
-                enableRealtimeBtn.addEventListener('click', () => {
-                    try {
-                        console.log("User clicked: Attempting to enable real-time listeners...");
-                        setupRealtimeListeners(); // Call the original function
-                        enableRealtimeBtn.textContent = 'Real-time Sync Enabled (Attempted)';
-                        enableRealtimeBtn.style.backgroundColor = '#28a745'; // Green
-                        enableRealtimeBtn.style.color = 'white';
-                        enableRealtimeBtn.disabled = true;
-                        console.log("Real-time listeners setup initiated by user.");
-                    } catch (e) {
-                        console.error("Error enabling real-time listeners via button:", e);
-                        showError("Error enabling real-time sync. Check console.");
-                        if(enableRealtimeBtn) { // Check again in case it was removed or error occurred before variable was set
-                             enableRealtimeBtn.textContent = 'Error Enabling Sync';
-                             enableRealtimeBtn.style.backgroundColor = '#dc3545'; // Red
-                             enableRealtimeBtn.style.color = 'white';
-                        }
-                    }
-                });
-            } else {
-                console.warn("#enableRealtimeBtn not found. Real-time sync cannot be enabled by user button.");
-            }
         }
 
         // 모드 설정
@@ -1519,29 +1471,25 @@
                 // Note: dayData is still fetched using dateStr (UTC string) as keys are stored this way.
                 const dayData = scheduleData[dateStr];
                 if (dayData && dayData.allocations) {
-                    content += '<div class="group-samples">';
-                    
-                    currentConfig.groups.forEach(group => {
-                        let groupTotal = 0;
-                        Object.values(dayData.allocations).forEach(analystAlloc => {
-                            groupTotal += analystAlloc[group.name] || 0;
-                        });
-                        
-                        if (groupTotal > 0) {
-                            content += `<span class="group-tag" style="background: ${group.color};">${group.name.replace('#', '')}${groupTotal}</span>`;
-                        }
-                    });
-                    
-                    content += '</div>';
-
-                    // Analyst-specific counts
+                    // New logic to display allocations per analyst
                     if (currentConfig.analysts && currentConfig.analysts.length > 0) {
                         currentConfig.analysts.forEach(analyst => {
+                            let analystHasAllocations = false;
+                            let groupCountsString = '';
                             if (dayData.allocations[analyst.name]) {
-                                const analystTotal = Object.values(dayData.allocations[analyst.name]).reduce((sum, count) => sum + (count || 0), 0);
-                                if (analystTotal > 0) {
-                                    content += `<div style="font-size: 9px; margin-top: 3px; color: #333;">${analyst.emoji || '👤'} ${analyst.name}: ${analystTotal}개</div>`;
-                                }
+                                currentConfig.groups.forEach(group => {
+                                    const count = dayData.allocations[analyst.name][group.name];
+                                    if (count > 0) {
+                                        analystHasAllocations = true;
+                                        groupCountsString += `${group.name.replace('#', '')} (${count}), `;
+                                    }
+                                });
+                            }
+
+                            if (analystHasAllocations) {
+                                // Remove trailing comma and space
+                                groupCountsString = groupCountsString.slice(0, -2);
+                                content += `<div style="font-size: 9px; margin-top: 3px; color: #333;">${analyst.emoji || '👤'} ${analyst.name}: ${groupCountsString}</div>`;
                             }
                         });
                     }

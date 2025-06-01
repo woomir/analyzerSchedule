@@ -716,15 +716,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 전역 변수
-        window.db = db;
-        window.doc = doc;
-        window.setDoc = setDoc;
-        window.getDoc = getDoc;
-        window.onSnapshot = onSnapshot;
-        window.collection = collection;
-        window.getDocs = getDocs;
-
         let currentMode = 'viewer';
         let scheduleData = {};
         let currentConfig = {
@@ -765,11 +756,11 @@
 
         // DOM 로드 완료 후 초기화
         document.addEventListener('DOMContentLoaded', function() {
-            initializeApp();
+            setupLabScheduleApp();
         });
 
         // 앱 초기화
-        async function initializeApp() {
+        async function setupLabScheduleApp() {
             try {
                 updateFirebaseStatus('loading', 'Firebase 연결 중...');
                 
@@ -1693,30 +1684,6 @@
             }
         }
 
-        // 전역 함수로 노출
-        window.setMode = setMode;
-        window.showTab = showTab;
-        window.setupAllocationTab = setupAllocationTab;
-        window.generateAllocationGrid = generateAllocationGrid;
-        window.loadAllocationData = loadAllocationData;
-        window.updateAllocationSummary = updateAllocationSummary;
-        window.saveAllocation = saveAllocation;
-        window.copyPreviousDay = copyPreviousDay;
-        window.updateUI = updateUI;
-        window.updateGroupInfo = updateGroupInfo;
-        window.updateCalendarView = updateCalendarView;
-        window.getMonthsInRange = getMonthsInRange;
-        window.generateMonthCalendar = generateMonthCalendar;
-        window.generateDayContent = generateDayContent;
-        window.saveConfiguration = saveConfiguration;
-        window.restoreUIData = restoreUIData;
-        window.addVacation = addVacation;
-        window.resetData = resetData;
-        window.exportToCSV = exportToCSV;
-        window.exportToJSON = exportToJSON;
-        window.downloadFile = downloadFile;
-        window.showError = showError;
-        window.showSuccess = showSuccess;
     </script>
 </body>
 </html>
